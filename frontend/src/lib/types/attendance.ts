@@ -59,3 +59,23 @@ export function attendanceStatusLabel(code: string | null): string {
   if (!code) return "미등록";
   return ATTENDANCE_STATUSES.find((s) => s.code === code)?.label ?? code;
 }
+
+export interface MonthlyAttendanceRow {
+  employeeId: number;
+  employeeNo: string;
+  name: string;
+  departmentName: string | null;
+  days: Record<string, string>;
+  checkIn: number;
+  late: number;
+  annualLeave: number;
+  absent: number;
+}
+
+export interface MonthlyAttendanceResponse {
+  year: number;
+  month: number;
+  totalWorkDays: number;
+  targetHeadcount: number;
+  rows: MonthlyAttendanceRow[];
+}

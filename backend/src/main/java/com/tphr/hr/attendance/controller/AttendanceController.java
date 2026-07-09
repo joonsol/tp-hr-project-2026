@@ -4,9 +4,11 @@ import com.tphr.hr.attendance.dto.AttendanceBulkRequest;
 import com.tphr.hr.attendance.dto.AttendanceRosterResponse;
 import com.tphr.hr.attendance.dto.AttendanceSearchResponse;
 import com.tphr.hr.attendance.dto.AttendanceUpsertRequest;
+import com.tphr.hr.attendance.dto.MonthlyAttendanceResponse;
 import com.tphr.hr.attendance.service.AttendanceService;
 import jakarta.validation.Valid;
 import java.time.LocalDate;
+import java.time.YearMonth;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -40,5 +42,13 @@ public class AttendanceController {
     @PostMapping("/bulk")
     public void bulkUpsert(@Valid @RequestBody AttendanceBulkRequest request) {
         attendanceService.bulkUpsert(request);
+    }
+
+    @GetMapping("/monthly")
+    public MonthlyAttendanceResponse monthly(
+            @RequestParam int year,
+            @RequestParam int month,
+            @RequestParam(required = false) Long departmentId) {
+        return attendanceService.getMonthly(YearMonth.of(year, month), departmentId);
     }
 }

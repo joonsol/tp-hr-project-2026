@@ -5,6 +5,8 @@ import com.tphr.hr.attendance.dto.AttendanceCounts;
 import com.tphr.hr.attendance.dto.AttendanceRosterResponse;
 import com.tphr.hr.attendance.dto.AttendanceSearchResponse;
 import com.tphr.hr.attendance.dto.AttendanceUpsertRequest;
+import com.tphr.hr.attendance.dto.MonthlyAttendanceResponse;
+import com.tphr.hr.attendance.dto.MonthlyAttendanceRowResponse;
 import com.tphr.hr.attendance.entity.Attendance;
 import com.tphr.hr.attendance.repository.AttendanceRepository;
 import com.tphr.hr.common.exception.BusinessException;
@@ -12,7 +14,10 @@ import com.tphr.hr.common.exception.ErrorCode;
 import com.tphr.hr.employee.entity.Employee;
 import com.tphr.hr.employee.repository.EmployeeRepository;
 import com.tphr.hr.employee.service.EmployeeSpecifications;
+import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.YearMonth;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -20,6 +25,7 @@ import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -55,6 +61,61 @@ public class AttendanceService {
                 content, counts,
                 employeePage.getTotalElements(), employeePage.getTotalPages(),
                 employeePage.getNumber(), employeePage.getSize()
+        );
+    }
+
+    public MonthlyAttendanceResponse getMonthly(YearMonth yearMonth, Long departmentId) {
+        var spec = EmployeeSpecifications.search(null, departmentId, null, Employee.STATUS_ACTIVE);
+        List<Employee> employees = employeeRepository.findAll(spec, Sort.by("name"));
+
+        LocalDate startDate = yearMonth.atDay(1);
+        LocalDate endDate = yearMonth.atEndOfMonth();
+        List<Long> ids = employees.stream().map(Employee::getEmployeeId).toList();
+
+        Map<Long, Map<Integer, Attendance>> byEmployeeAndDay = new HashMap<>();
+        if (!ids.isEmpty()) {
+            for (Attendance a : attendanceRepository.findByWorkDateBetweenAndEmployee_EmployeeIdIn(startDate, endDate, ids)) {
+                byEmployeeAndDay
+                        .computeIfAbsent(a.getEmployee().getEmployeeId(), k -> new HashMap<>())
+                        .put(a.getWorkDate().getDayOfMonth(), a);
+            }
+        }
+
+        List<MonthlyAttendanceRowResponse> rows = employees.stream()
+                .map(e -> toMonthlyRow(e, byEmployeeAndDay.getOrDefault(e.getEmployeeId(), Map.of())))
+                .toList();
+
+        int totalWorkDays = 0;
+        for (LocalDate d = startDate; !d.isAfter(endDate); d = d.plusDays(1)) {
+            if (d.getDayOfWeek() != DayOfWeek.SATURDAY && d.getDayOfWeek() != DayOfWeek.SUNDAY) {
+                totalWorkDays++;
+            }
+        }
+
+        return new MonthlyAttendanceResponse(yearMonth.getYear(), yearMonth.getMonthValue(), totalWorkDays, employees.size(), rows);
+    }
+
+    private MonthlyAttendanceRowResponse toMonthlyRow(Employee employee, Map<Integer, Attendance> byDay) {
+        Map<Integer, String> days = new HashMap<>();
+        long checkIn = 0;
+        long late = 0;
+        long annualLeave = 0;
+        long absent = 0;
+        for (Map.Entry<Integer, Attendance> entry : byDay.entrySet()) {
+            String code = entry.getValue().getAttendanceStatusCode();
+            days.put(entry.getKey(), code);
+            if (Attendance.CHECK_IN.equals(code)) checkIn++;
+            else if (Attendance.LATE.equals(code)) late++;
+            else if (Attendance.ANNUAL_LEAVE.equals(code)) annualLeave++;
+            else if (Attendance.ABSENT.equals(code)) absent++;
+        }
+        return new MonthlyAttendanceRowResponse(
+                employee.getEmployeeId(),
+                employee.getEmployeeNo(),
+                employee.getName(),
+                employee.getDepartment() != null ? employee.getDepartment().getDepartmentName() : null,
+                days,
+                checkIn, late, annualLeave, absent
         );
     }
 

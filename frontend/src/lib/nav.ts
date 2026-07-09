@@ -71,7 +71,7 @@ export const TOP_TABS: TopTab[] = [
         label: "근태관리",
         items: [
           { label: "일일근태등록", href: "/attendance" },
-          { label: "월근태현황", href: "/attendance/monthly", placeholder: true },
+          { label: "월근태현황", href: "/attendance/monthly" },
         ],
       },
       {
@@ -91,7 +91,19 @@ export const TOP_TABS: TopTab[] = [
     label: "급여관리",
     homeHref: "/payroll",
     matches: (p) => p.startsWith("/payroll"),
-    sidebar: [],
+    sidebar: [
+      {
+        icon: "doc",
+        label: "급여관리",
+        items: [
+          { label: "급여기본정보관리", href: "/payroll" },
+          { label: "급여지급", href: "/payroll/payment", placeholder: true },
+          { label: "기본수당외수당관리", href: "/payroll/allowances", placeholder: true },
+          { label: "급여계산", href: "/payroll/calculate", placeholder: true },
+          { label: "급여조회", href: "/payroll/inquiry", placeholder: true },
+        ],
+      },
+    ],
   },
   {
     key: "daily",

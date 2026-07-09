@@ -45,7 +45,8 @@ export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): 
   if (res.status === 204) {
     return undefined as T;
   }
-  return res.json() as Promise<T>;
+  const text = await res.text();
+  return (text ? JSON.parse(text) : undefined) as T;
 }
 
 export function toQueryString(params: Record<string, string | number | boolean | undefined | null>): string {

@@ -299,7 +299,10 @@ export default function AttendancePage() {
                     <input
                       type="checkbox"
                       checked={checkedIds.has(entry.employeeId)}
-                      onChange={() => toggleChecked(entry.employeeId)}
+                      onChange={() => {
+                        toggleChecked(entry.employeeId);
+                        selectRow(entry);
+                      }}
                     />
                   </td>
                   <td className="px-3 py-2">{entry.employeeNo}</td>
